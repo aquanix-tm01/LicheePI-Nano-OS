@@ -1,0 +1,5 @@
+config BR2_PACKAGE_MYAPP
+	bool "myapp"
+	depends on BR2_TOOLCHAIN_HAS_THREADS
+	help
+	  LVGL application (fbdev + evdev).

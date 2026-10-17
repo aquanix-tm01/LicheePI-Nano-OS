@@ -1,0 +1,6 @@
+MYAPP_VERSION = 1.0
+MYAPP_SITE = $(BR2_EXTERNAL_LICHEEPI_NANO_PATH)/../myapp
+MYAPP_SITE_METHOD = local
+MYAPP_CONF_OPTS = -DCMAKE_BUILD_TYPE=Release
+
+$(eval $(cmake-package))
