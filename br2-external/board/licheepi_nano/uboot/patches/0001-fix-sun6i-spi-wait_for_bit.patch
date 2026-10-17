@@ -1,0 +1,30 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Mehdi Soheili <m.soheilipour@gmail.com>
+Date: Sat, 16 Oct 2026 18:00:00 +0000
+Subject: [PATCH] spi: sun6i: fix wait_for_bit undefined reference
+
+U-Boot v2021.01 removed the generic wait_for_bit() function
+and replaced it with wait_for_bit_le32(). Update sun6i_spi.c
+to use the new API.
+
+Signed-off-by: Mehdi Soheili <m.soheilipour@gmail.com>
+--- a/drivers/spi/sun6i_spi.c
++++ b/drivers/spi/sun6i_spi.c
+@@ -246,7 +246,7 @@
+ 	/* Reset FIFO */
+ 	writel(FCR_RX_FIFO_RST | FCR_TX_FIFO_RST, &spi->FCR);
+ 	/* Wait until the FIFO reset autoclears */
+-	ret = wait_for_bit(dev->name, &spi->FCR,
++	ret = wait_for_bit_le32(&spi->FCR,
+ 			   FCR_RX_FIFO_RST | FCR_TX_FIFO_RST,
+ 			   false, 10, true);
+ 	if (ret < 0) {
+@@ -282,7 +282,7 @@
+ 		/* Start transfer ... */
+ 		setbits_le32(&spi->TCR, TCR_XCH);
+ 		/* ... and wait until it finshes. */
+-		ret = wait_for_bit(dev->name, &spi->TCR, TCR_XCH,
++		ret = wait_for_bit_le32(&spi->TCR, TCR_XCH,
+ 				   false, timeout_ms, true);
+ 		if (ret < 0) {
+ 			printf("%s: stuck in XCH for %ld ms\n",

@@ -1,0 +1,79 @@
+name: Build sdcard image
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_version:
+        description: 'Base image tag (latest or a commit sha)'
+        default: 'latest'
+  push:
+    branches: [main]
+    paths:
+      - 'br2-external/**'
+      - 'myapp/**'
+      - 'docker/Dockerfile.image'
+    tags: ['v*']
+
+permissions:
+  contents: write
+  packages: read
+
+concurrency:
+  group: image-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  image:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android
+          df -h /
+
+      - name: Lowercase image name
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}-base" >> $GITHUB_ENV
+
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build on top of base image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile.image
+          target: localout
+          build-args: |
+            BASE_IMAGE=${{ env.IMAGE }}
+            BASE_VERSION=${{ inputs.base_version || 'latest' }}
+          outputs: type=tar,dest=dist.tar
+
+      - name: Extract
+        run: |
+          mkdir dist && tar xf dist.tar -C dist
+          ls -lh dist
+          gzip -k dist/sdcard.img
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: licheepi-nano-images
+          path: dist/
+
+      - name: Release (on tag)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/sdcard.img.gz
+            dist/u-boot-sunxi-with-spl.bin
+            dist/zImage
+            dist/*.dtb

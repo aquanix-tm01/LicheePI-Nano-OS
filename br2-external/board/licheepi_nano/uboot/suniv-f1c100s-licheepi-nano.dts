@@ -1,0 +1,89 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR X11)
+/*
+ * Copyright 2018 Icenowy Zheng <icenowy@aosc.io>
+ *
+ * Lichee Pi Nano with SPI-NAND (Winbond W25N01GV)
+ */
+
+/dts-v1/;
+#include "suniv-f1c100s.dtsi"
+
+#include <dt-bindings/gpio/gpio.h>
+
+/ {
+	model = "Lichee Pi Nano";
+	compatible = "licheepi,licheepi-nano", "allwinner,suniv-f1c100s",
+		     "allwinner,suniv";
+
+	aliases {
+		serial0 = &uart0;
+		spi0 = &spi0;
+	};
+
+	chosen {
+		stdout-path = "serial0:115200n8";
+	};
+};
+
+&otg_sram {
+	status = "okay";
+};
+
+&spi0 {
+        pinctrl-names = "default";
+        pinctrl-0 = <&spi0_pins_a>;
+        status = "okay";
+        #address-cells = <1>;
+        #size-cells = <1>;
+
+        flash@0 {
+                compatible = "spi-nand";
+                reg = <0>;
+                spi-max-frequency = <40000000>;
+
+                partitions {
+                        compatible = "fixed-partitions";
+                        #address-cells = <1>;
+                        #size-cells = <1>;
+
+                        partition@0 {
+                                label = "u-boot";
+                                reg = <0x000000 0x200000>;
+                                read-only;
+                        };
+
+                        partition@200000 {
+                                label = "kernel";
+                                reg = <0x200000 0x400000>;
+                                read-only;
+                        };
+
+                        partition@600000 {
+                                label = "dtb";
+                                reg = <0x600000 0x100000>;
+                                read-only;
+                        };
+
+                        partition@700000 {
+                                label = "rootfs";
+                                reg = <0x700000 0x7900000>;
+                        };
+                };
+        };
+};
+
+&uart0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart0_pins_a>;
+	status = "okay";
+};
+
+&usb_otg {
+	dr_mode = "otg";
+	status = "okay";
+};
+
+&usbphy {
+	usb0_id_det-gpio = <&pio 4 2 GPIO_ACTIVE_HIGH>; /* PE2 */
+	status = "okay";
+};

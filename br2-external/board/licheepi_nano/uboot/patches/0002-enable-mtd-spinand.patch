@@ -1,0 +1,36 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Mehdi Soheili <m.soheilipour@gmail.com>
+Date: Sat, 16 Oct 2026 18:00:00 +0000
+Subject: [PATCH] sunxi: licheepi_nano: enable SPI-NAND and MTD support
+
+Enable SPI, MTD, SPI-NAND, UBI, UBIFS in licheepi_nano defconfig.
+Disable SPI_SUNXI to use sun6i_spi driver instead.
+
+Signed-off-by: Mehdi Soheili <m.soheilipour@gmail.com>
+---
+--- a/configs/licheepi_nano_defconfig
++++ b/configs/licheepi_nano_defconfig
+@@ -8,3 +8,23 @@
+ CONFIG_DEFAULT_DEVICE_TREE="suniv-f1c100s-licheepi-nano"
+ CONFIG_SPL=y
+ # CONFIG_SPL_DM_SERIAL is not set
++# CONFIG_SPI_SUNXI is not set
++CONFIG_SPI=y
++CONFIG_DM_SPI=y
++CONFIG_SPI_MEM=y
++CONFIG_SUN6I_SPI=y
++CONFIG_CMD_SPI=y
++CONFIG_MTD=y
++CONFIG_DM_MTD=y
++CONFIG_MTD_PARTITIONS=y
++CONFIG_MTD_SPI_NAND=y
++CONFIG_MTD_NAND_CORE=y
++CONFIG_MTD_UBI=y
++CONFIG_MTD_UBI_WL_THRESHOLD=4096
++CONFIG_MTD_UBI_BEB_LIMIT=20
++CONFIG_CMD_MTD=y
++CONFIG_CMD_MTDPARTS=y
++CONFIG_CMD_UBI=y
++CONFIG_CMD_UBIFS=y
++CONFIG_WAIT_FOR_BIT=y
++CONFIG_LZO=y
