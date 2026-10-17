@@ -1,17 +1,21 @@
 # Fast rebuild on top of the base image: re-applies br2-external changes
-# (kernel/U-Boot config, DTS, patches, overlay) without rebuilding the toolchain.
+# (kernel/U-Boot config, DTS, patches, overlay, myapp) without rebuilding the toolchain.
 ARG BASE_IMAGE=licheepi-nano-base
 ARG BASE_VERSION=latest
 
 FROM $BASE_IMAGE:$BASE_VERSION AS local
 
 # replace the external tree (deleted files must not linger from the base)
-RUN rm -rf /root/licheepi-nano
+RUN rm -rf /root/licheepi-nano /root/myapp
 COPY br2-external/ /root/licheepi-nano/
-RUN chmod +x /root/licheepi-nano/board/licheepi_nano/post-image.sh
+COPY myapp/ /root/myapp/
+RUN chmod +x /root/licheepi-nano/board/licheepi_nano/post-image.sh \
+             /root/licheepi-nano/board/licheepi_nano/rootfs-overlay/etc/init.d/S99myapp
 
 WORKDIR /root/buildroot
-RUN BR2_EXTERNAL=/root/licheepi-nano make licheepi_nano_defconfig
+RUN BR2_EXTERNAL=/root/licheepi-nano make licheepi_nano_defconfig \
+ && echo 'BR2_PACKAGE_MYAPP=y' >> .config \
+ && make olddefconfig
 
 # force rebuild of packages that depend on files in br2-external
 RUN rm -rf output/build/uboot-* output/build/.uboot-*

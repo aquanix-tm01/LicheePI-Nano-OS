@@ -1,2 +1,5 @@
 *
 !br2-external
+!myapp
+myapp/build*
+**/.git
