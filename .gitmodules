@@ -1,0 +1,3 @@
+[submodule "myapp/lvgl"]
+	path = myapp/lvgl
+	url = https://github.com/lvgl/lvgl.git
