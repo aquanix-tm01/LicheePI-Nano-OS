@@ -10,6 +10,7 @@ on:
     branches: [main]
     paths:
       - 'br2-external/**'
+      - 'myapp/**'
       - 'docker/Dockerfile.image'
     tags: ['v*']
 
@@ -54,6 +55,7 @@ jobs:
           build-args: |
             BASE_IMAGE=${{ env.IMAGE }}
             BASE_VERSION=${{ inputs.base_version || 'latest' }}
+            FORCE_FULL=${{ (github.ref_type == 'tag' || github.event_name == 'workflow_dispatch') && '1' || '0' }}
           outputs: type=tar,dest=dist.tar
 
       - name: Extract
@@ -65,7 +67,11 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: licheepi-nano-images
-          path: dist/
+          path: |
+            dist/sdcard.img.gz
+            dist/u-boot-sunxi-with-spl.bin
+            dist/zImage
+            dist/*.dtb
 
       - name: Release (on tag)
         if: startsWith(github.ref, 'refs/tags/')

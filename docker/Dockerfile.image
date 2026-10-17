@@ -1,13 +1,29 @@
-# Fast rebuild on top of the base image: re-applies br2-external changes
-# (kernel/U-Boot config, DTS, patches, overlay, myapp) without rebuilding the toolchain.
+# Fast rebuild on top of the base image.
+# Kernel/U-Boot are rebuilt only if their inputs differ from the tree baked into
+# the base image (or FORCE_FULL=1); otherwise only myapp + rootfs + images are built.
 ARG BASE_IMAGE=licheepi-nano-base
 ARG BASE_VERSION=latest
 
 FROM $BASE_IMAGE:$BASE_VERSION AS local
+ARG FORCE_FULL=0
+SHELL ["/bin/bash", "-c"]
 
-# replace the external tree (deleted files must not linger from the base)
-RUN rm -rf /root/licheepi-nano /root/myapp
-COPY br2-external/ /root/licheepi-nano/
+COPY br2-external/ /tmp/br2-new/
+
+# decide: full (kernel + U-Boot) or app-only rebuild
+RUN set -e; \
+    O=/root/licheepi-nano; N=/tmp/br2-new; B=board/licheepi_nano; full=0; \
+    [ "$FORCE_FULL" = "1" ] && full=1; \
+    diff -rq $O/$B/linux $N/$B/linux || full=1; \
+    diff -rq $O/$B/uboot $N/$B/uboot || full=1; \
+    diff -q  $O/$B/boot.cmd $N/$B/boot.cmd || full=1; \
+    diff -q <(grep -v EXT2_SIZE $O/configs/licheepi_nano_defconfig) \
+            <(grep -v EXT2_SIZE $N/configs/licheepi_nano_defconfig) || full=1; \
+    echo $full > /root/full_rebuild; \
+    echo ">>> full_rebuild=$full"
+
+# install the new external tree and app sources
+RUN rm -rf /root/licheepi-nano /root/myapp && mv /tmp/br2-new /root/licheepi-nano
 COPY myapp/ /root/myapp/
 RUN chmod +x /root/licheepi-nano/board/licheepi_nano/post-image.sh \
              /root/licheepi-nano/board/licheepi_nano/rootfs-overlay/etc/init.d/S99myapp
@@ -17,12 +33,17 @@ RUN BR2_EXTERNAL=/root/licheepi-nano make licheepi_nano_defconfig \
  && echo 'BR2_PACKAGE_MYAPP=y' >> .config \
  && make olddefconfig
 
-# force rebuild of packages that depend on files in br2-external
-RUN rm -rf output/build/uboot-* output/build/.uboot-*
-RUN rm -f output/build/host-uboot-tools-*/.stamp_built output/build/host-uboot-tools-*/.stamp_*installed
-RUN rm -f output/build/linux-custom/.stamp_dotconfig output/build/linux-custom/.stamp_configured \
-          output/build/linux-custom/.stamp_built output/build/linux-custom/.stamp_*installed
-RUN rm -f output/build/linux-firmware-*/.stamp_built output/build/linux-firmware-*/.stamp_*installed
+# kernel + U-Boot stamps are cleared only on a full rebuild
+RUN if [ "$(cat /root/full_rebuild)" = "1" ]; then \
+      rm -rf output/build/uboot-* output/build/.uboot-*; \
+      rm -f output/build/host-uboot-tools-*/.stamp_built output/build/host-uboot-tools-*/.stamp_*installed; \
+      rm -f output/build/linux-custom/.stamp_dotconfig output/build/linux-custom/.stamp_configured \
+            output/build/linux-custom/.stamp_built output/build/linux-custom/.stamp_*installed; \
+      rm -f output/build/linux-firmware-*/.stamp_built output/build/linux-firmware-*/.stamp_*installed; \
+    fi
+
+# myapp is always rebuilt from the current sources
+RUN rm -rf output/build/myapp-*
 
 RUN make
 
